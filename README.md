@@ -12,12 +12,12 @@ coherence and structural integrity only. It does **not** determine
 authorization, and it does **not** demonstrate that an external system
 executed the transformation or that the declared consequence occurred.
 
-## Status — v0.2, exploratory prototype
+## Status — v0.3 incremental implementation
 
-- First prototype run: 9 tests passed, 0 failed (`tests/test_verifier.py`).
-- The 9 tests do **not** establish that the four blocks are correctly linked:
-  v0.2 does not check the correspondences between `INTENT.target`,
-  `TRANSFORMATION.arguments` and `TRANSFORMATION.rule` (see A1–A3 below).
+- The original 9 relation tests remain as compatibility regressions.
+- A1-A3 remain open: the verifier does not yet check all correspondences
+  between `INTENT.target`, `TRANSFORMATION.arguments` and
+  `TRANSFORMATION.rule`.
 - No authorization, no correspondence with real state, and no effective
   execution have been demonstrated.
 - License: none chosen yet. The author's other repositories carry no license;
@@ -29,8 +29,8 @@ executed the transformation or that the declared consequence occurred.
 src/sif/verifier.py            # v0.2 prototype verifier (single module; split into
                                # models/validation/paths/canonicalize/semantics in v0.3)
 schemas/sif-0.2.schema.json
-tests/test_verifier.py         # 9 relation tests + A1-A3/B8 regressions (expected failures)
-tests/test_totality.py         # B4 totality tests (expected failures until v0.3)
+tests/test_verifier.py         # 9 relation tests + A1-A3 expected failures + B8
+tests/test_totality.py         # active B4 totality regressions
 tests/fixtures/valid/          # valid example
 tests/fixtures/adversarial/    # B4 regression input
 docs/semantic-contract-v0.2.md
@@ -45,10 +45,10 @@ examples/valid-add-label.json
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-Expected: 9 passed, 6 expected failures (A1, A2, A3, B8, B4, deep nesting).
-Expected failures are obligations from the contract that v0.2 does not
-implement; they must turn green in v0.3. Do not delete them to make the
-suite pass.
+Run the complete suite with the command above. The A1-A3 cases remain
+expected failures; B4 and B8 are active regressions. The CI workflow executes
+the same command on pushes and pull requests. Do not delete expected failures
+to make the suite pass.
 
 ## Known gaps (regressions)
 
@@ -57,11 +57,11 @@ suite pass.
   or `operator`.
 - **A2**: `operator` contradicts `rule.kind` → still PASS.
 - **A3**: `INTENT.action` contradicts `operator`/`rule.kind` → still PASS.
-- **B4**: malformed `preconditions` (e.g. a string instead of a list) raises
-  an uncaught `AttributeError` instead of returning a verdict. A deeply
-  nested value raises `RecursionError` from `deepcopy`.
-- **B8**: `scope` with the wrong type returns FAIL for the wrong reason
-  (the string is read as a set of characters).
+- **B4**: closed in the current increment: malformed `preconditions` returns
+  `UNKNOWN/STRUCTURAL_ERROR`; deeply nested values return
+  `UNKNOWN/RESOURCE_LIMIT`, without an uncaught exception.
+- **B8**: closed in the current increment: a `scope` with the wrong type
+  returns `UNKNOWN/STRUCTURAL_ERROR`, not a misleading semantic `FAIL`.
 
 See `docs/audit-log.md` for the full record.
 
@@ -69,10 +69,10 @@ See `docs/audit-log.md` for the full record.
 
 The semantic contract (`docs/semantic-contract-v0.2.md`) defines the
 obligations. The closing criterion for v0.3
-(`docs/decisions/0001-result-status-and-findings.md`): every input produces
-a structured report `{status, findings[]}`; invalid structure yields UNKNOWN
-with a STRUCTURAL_ERROR finding; status is the worst finding
-(FAIL > UNKNOWN > PASS); no uncaught exception escapes the verifier.
+(`docs/decisions/0001-result-status-and-findings.md`): the verifier returns a structured report `{status, findings[]}` for tested
+inputs; invalid structure yields UNKNOWN with a STRUCTURAL_ERROR finding;
+status precedence is FAIL > UNKNOWN > PASS; ordinary evaluation exceptions
+are contained. This increment closes B4 and B8 only. A1-A3 and B5 remain open.
 
 StarkCore is intentionally not a dependency: SIF stays decoupled until there
 is enough evidence to integrate it.

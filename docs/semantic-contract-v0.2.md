@@ -23,20 +23,21 @@ V(S, I, T, C) ∈ {PASS, FAIL, UNKNOWN}
 
 - **PASS:** todas las obligaciones de este contrato se comprobaron y se
   cumplen.
-- **FAIL:** se comprobó una contradicción, una obligación incumplida o una
-  estructura inválida.
-- **UNKNOWN:** no hay información suficiente para decidir alguna obligación.
+- **FAIL:** se comprobó una contradicción o una obligación incumplida.
+- **UNKNOWN:** falta información, la estructura no puede evaluarse o el
+  evaluador no puede completar la comprobación.
 
-`UNKNOWN` **NO DEBE** convertirse en `PASS`. Una estructura inválida —por
-ejemplo, campos requeridos ausentes o tipos incorrectos— produce `FAIL`;
-una referencia cuyo significado no puede resolverse produce `UNKNOWN`.
+`UNKNOWN` **NO DEBE** convertirse en `PASS`. Una estructura inválida
+(por ejemplo, campos requeridos ausentes o tipos incorrectos) produce
+`UNKNOWN` y un hallazgo `STRUCTURAL_ERROR`; una referencia cuyo significado
+no puede resolverse produce `UNKNOWN` y un hallazgo de resolución.
 
-> NOTA (decisión 0001): el criterio de cierre de v0.3 revisa esta sección:
-> una estructura inválida produce `UNKNOWN` con el error estructural
-> registrado como hallazgo, y el estado final es el peor hallazgo
-> (FAIL > UNKNOWN > PASS). Ver
-> `docs/decisions/0001-result-status-and-findings.md`. Esta sección del
-> contrato debe corregirse para reflejar esa decisión antes de cerrar v0.3.
+El resultado v0.3 se representa como un informe:
+`{status, findings[]}`. El estado resume el hallazgo de mayor severidad:
+`FAIL > UNKNOWN > PASS`. El informe conserva los hallazgos asociados a la
+evaluación. La acumulación de hallazgos múltiples durante una misma evaluación
+sigue pendiente (B5); el prototipo actual puede detenerse en el primer
+hallazgo semántico.
 
 ## 2. Modelo de rutas
 

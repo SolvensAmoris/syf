@@ -1,12 +1,8 @@
-"""SIF v0.2 prototype verifier (single module).
+"""SIF transition verifier.
 
-Logic verbatim from the v0.2 prototype. Pending split into
-models / validation / paths / canonicalize / semantics in v0.3.
-
-Known gaps (see docs/audit-log.md): the verifier never reads
-TRANSFORMATION.arguments, INTENT.target or TRANSFORMATION.operator
-(A1-A3); malformed input can raise uncaught exceptions (B4);
-snapshot_digest is never checked.
+The semantic engine remains the v0.2 prototype. This v0.3 increment adds
+structural pre-validation, structured reports, and exception containment
+for B4/B8. A1-A3, B5, and snapshot_digest verification remain open.
 """
 
 from copy import deepcopy
@@ -66,7 +62,7 @@ def derive(sif):
     result[path] = before + [value]
     return result
 
-def verify(sif):
+def _verify_v02(sif):
     try:
         if sif.get("schema_version") != "SIF-0.2": raise Invalid("unsupported schema")
         for p in sif["TRANSFORMATION"]["preconditions"]:
@@ -97,3 +93,134 @@ def verify(sif):
         return "UNKNOWN", str(e)
     except (KeyError, TypeError, Invalid, ValueError) as e:
         return "UNKNOWN", f"cannot evaluate: {e}"
+
+
+class VerificationReport:
+    """Structured verifier output; tuple access remains for v0.2 callers."""
+    __slots__ = ("status", "findings", "result")
+
+    def __init__(self, status, findings=None, result=None):
+        self.status = status
+        self.findings = list(findings or [])
+        self.result = result
+
+    @property
+    def legacy_detail(self):
+        if self.status == "PASS":
+            return self.result
+        return self.findings[0]["message"] if self.findings else None
+
+    def __getitem__(self, index):
+        if index == 0:
+            return self.status
+        if index == 1:
+            return self.legacy_detail
+        raise IndexError(index)
+
+    def __iter__(self):
+        yield self.status
+        yield self.legacy_detail
+
+    def __len__(self):
+        return 2
+
+    def as_dict(self):
+        report = {"status": self.status, "findings": self.findings}
+        if self.result is not None:
+            report["result"] = self.result
+        return report
+
+    def __eq__(self, other):
+        return isinstance(other, VerificationReport) and self.as_dict() == other.as_dict()
+
+    def __repr__(self):
+        return f"VerificationReport({self.as_dict()!r})"
+
+
+def _structural_finding(sif):
+    """Return the first structural defect before semantic evaluation."""
+    if not isinstance(sif, dict):
+        return "/", "document must be an object"
+    if sif.get("schema_version") != "SIF-0.2":
+        return "/schema_version", "unsupported or missing schema version"
+
+    blocks = ("STATE", "INTENT", "TRANSFORMATION", "CONSEQUENCE")
+    for name in blocks:
+        if not isinstance(sif.get(name), dict):
+            return f"/{name}", f"{name} must be an object"
+
+    state, intent = sif["STATE"], sif["INTENT"]
+    transform, consequence = sif["TRANSFORMATION"], sif["CONSEQUENCE"]
+
+    checks = [
+        (state.get("facts"), dict, "/STATE/facts"),
+        (state.get("revision"), str, "/STATE/revision"),
+        (state.get("subject"), str, "/STATE/subject"),
+        (intent.get("parameters"), dict, "/INTENT/parameters"),
+        (intent.get("target"), list, "/INTENT/target"),
+        (transform.get("operator"), str, "/TRANSFORMATION/operator"),
+        (transform.get("arguments"), dict, "/TRANSFORMATION/arguments"),
+        (transform.get("rule"), dict, "/TRANSFORMATION/rule"),
+        (transform.get("preconditions"), list, "/TRANSFORMATION/preconditions"),
+        (transform.get("postconditions"), list, "/TRANSFORMATION/postconditions"),
+        (transform.get("frame"), list, "/TRANSFORMATION/frame"),
+        (consequence.get("scope"), list, "/CONSEQUENCE/scope"),
+        (consequence.get("expected_effects"), list, "/CONSEQUENCE/expected_effects"),
+        (consequence.get("forbidden_effects"), list, "/CONSEQUENCE/forbidden_effects"),
+        (consequence.get("invariants"), list, "/CONSEQUENCE/invariants"),
+    ]
+    for value, expected, path in checks:
+        if not isinstance(value, expected):
+            return path, f"{path} must be {expected.__name__}"
+
+    for path, values in (
+        ("/INTENT/target", intent["target"]),
+        ("/TRANSFORMATION/frame", transform["frame"]),
+        ("/CONSEQUENCE/scope", consequence["scope"]),
+    ):
+        if not all(isinstance(value, str) for value in values):
+            return path, f"{path} entries must be strings"
+
+    for block, key in ((transform, "preconditions"), (transform, "postconditions"),
+                       (consequence, "invariants")):
+        if not all(isinstance(item, dict) for item in block[key]):
+            return f"/{ 'TRANSFORMATION' if block is transform else 'CONSEQUENCE' }/{key}", f"{key} entries must be objects"
+
+    for i, effect in enumerate(consequence["expected_effects"] + consequence["forbidden_effects"]):
+        if not isinstance(effect, dict):
+            return f"/CONSEQUENCE/effects/{i}", "effect entries must be objects"
+
+    rule = transform["rule"]
+    for key in ("kind", "path", "value_from"):
+        if not isinstance(rule.get(key), str):
+            return f"/TRANSFORMATION/rule/{key}", f"rule.{key} must be a string"
+    return None
+
+
+def verify(sif):
+    """Return a structured report; malformed inputs never escape as exceptions."""
+    try:
+        defect = _structural_finding(sif)
+        if defect is not None:
+            path, message = defect
+            return VerificationReport("UNKNOWN", [{
+                "code": "STRUCTURAL_ERROR", "path": path, "message": f"structural error: {message}"
+            }])
+
+        status, detail = _verify_v02(sif)
+        if status == "PASS":
+            return VerificationReport("PASS", [], result=detail)
+        code = "CONTRADICTION" if status == "FAIL" else "UNRESOLVED"
+        return VerificationReport(status, [{
+            "code": code, "path": "/", "message": str(detail)
+        }])
+    except RecursionError as exc:
+        return VerificationReport("UNKNOWN", [{
+            "code": "RESOURCE_LIMIT", "path": "/",
+            "message": f"evaluation recursion limit reached: {type(exc).__name__}"
+        }])
+    except Exception as exc:
+        return VerificationReport("UNKNOWN", [{
+            "code": "EVALUATION_ERROR", "path": "/",
+            "message": f"evaluation could not be completed: {type(exc).__name__}"
+        }])

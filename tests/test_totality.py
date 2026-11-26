@@ -1,10 +1,8 @@
 """Totality tests (B4): malformed inputs must produce a report, never an
 uncaught exception.
 
-These tests are expected failures against the v0.2 prototype: they define
-the v0.3 totality contract (see
-docs/decisions/0001-result-status-and-findings.md). They must turn green
-in v0.3.
+These tests gate the v0.3 totality contract (see
+docs/decisions/0001-result-status-and-findings.md).
 """
 
 import json
@@ -28,14 +26,14 @@ BASE_PATH = os.path.join(
 
 
 class TotalityTests(unittest.TestCase):
-    @unittest.expectedFailure
     def test_b4_malformed_preconditions_returns_report(self):
         with open(B4_PATH, encoding="utf-8") as f:
             x = json.load(f)
-        status, _report = verify(x)
-        self.assertIn(status, ("PASS", "FAIL", "UNKNOWN"))
+        report = verify(x)
+        self.assertEqual(report.status, "UNKNOWN")
+        self.assertTrue(report.findings)
+        self.assertEqual(report.findings[0]["code"], "STRUCTURAL_ERROR")
 
-    @unittest.expectedFailure
     def test_deeply_nested_value_returns_report(self):
         with open(BASE_PATH, encoding="utf-8") as f:
             x = json.load(f)
@@ -43,8 +41,10 @@ class TotalityTests(unittest.TestCase):
         for _ in range(3000):
             deep = [deep]
         x["STATE"]["facts"]["/labels"] = deep
-        status, _report = verify(x)
-        self.assertIn(status, ("PASS", "FAIL", "UNKNOWN"))
+        report = verify(x)
+        self.assertEqual(report.status, "UNKNOWN")
+        self.assertTrue(report.findings)
+        self.assertEqual(report.findings[0]["code"], "RESOURCE_LIMIT")
 
 
 if __name__ == "__main__":
