@@ -45,7 +45,7 @@ examples/valid-add-label.json
 PYTHONPATH=src python -m unittest discover -s tests -v
 ```
 
-Expected: 9 passed, 6 expected failures (A1, A2, A3, B8, B4, deep nesting).
+Current v0.3 increment: 12 passed, 3 expected failures (A1, A2, A3), subject to a local full-suite run before review.
 Expected failures are obligations from the contract that v0.2 does not
 implement; they must turn green in v0.3. Do not delete them to make the
 suite pass.
@@ -57,11 +57,11 @@ suite pass.
   or `operator`.
 - **A2**: `operator` contradicts `rule.kind` → still PASS.
 - **A3**: `INTENT.action` contradicts `operator`/`rule.kind` → still PASS.
-- **B4**: malformed `preconditions` (e.g. a string instead of a list) raises
-  an uncaught `AttributeError` instead of returning a verdict. A deeply
-  nested value raises `RecursionError` from `deepcopy`.
-- **B8**: `scope` with the wrong type returns FAIL for the wrong reason
-  (the string is read as a set of characters).
+- **B4**: closed in the current increment: malformed `preconditions` returns
+  `UNKNOWN/STRUCTURAL_ERROR`; deeply nested values return
+  `UNKNOWN/RESOURCE_LIMIT`, without an uncaught exception.
+- **B8**: closed in the current increment: a `scope` with the wrong type
+  returns `UNKNOWN/STRUCTURAL_ERROR`, not a misleading semantic `FAIL`.
 
 See `docs/audit-log.md` for the full record.
 
@@ -69,10 +69,10 @@ See `docs/audit-log.md` for the full record.
 
 The semantic contract (`docs/semantic-contract-v0.2.md`) defines the
 obligations. The closing criterion for v0.3
-(`docs/decisions/0001-result-status-and-findings.md`): every input produces
-a structured report `{status, findings[]}`; invalid structure yields UNKNOWN
-with a STRUCTURAL_ERROR finding; status is the worst finding
-(FAIL > UNKNOWN > PASS); no uncaught exception escapes the verifier.
+(`docs/decisions/0001-result-status-and-findings.md`): the verifier returns a structured report `{status, findings[]}` for tested
+inputs; invalid structure yields UNKNOWN with a STRUCTURAL_ERROR finding;
+status precedence is FAIL > UNKNOWN > PASS; ordinary evaluation exceptions
+are contained. This increment closes B4 and B8 only. A1-A3 and B5 remain open.
 
 StarkCore is intentionally not a dependency: SIF stays decoupled until there
 is enough evidence to integrate it.
