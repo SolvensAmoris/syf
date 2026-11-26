@@ -73,6 +73,11 @@ class AggregateStatusTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             aggregate_status([{"severity": "error", "outcome": "FAIL"}])
 
+    def test_invalid_item_is_not_hidden_after_fail(self):
+        items = [finding(Severity.ERROR, Status.FAIL), object()]
+        with self.assertRaises(TypeError):
+            aggregate_status(items)
+
 
 class FindingAndReportTests(unittest.TestCase):
     def test_invalid_pass_outcome_is_rejected(self):
