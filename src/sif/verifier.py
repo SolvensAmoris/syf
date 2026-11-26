@@ -134,6 +134,12 @@ class VerificationReport:
             report["result"] = self.result
         return report
 
+    def __eq__(self, other):
+        return isinstance(other, VerificationReport) and self.as_dict() == other.as_dict()
+
+    def __repr__(self):
+        return f"VerificationReport({self.as_dict()!r})"
+
 
 def _structural_finding(sif):
     """Return the first structural defect before semantic evaluation."""
@@ -202,7 +208,7 @@ def verify(sif):
         if defect is not None:
             path, message = defect
             return VerificationReport("UNKNOWN", [{
-                "code": "STRUCTURAL_ERROR", "path": path, "message": message
+                "code": "STRUCTURAL_ERROR", "path": path, "message": f"structural error: {message}"
             }])
 
         status, detail = _verify_v02(sif)
