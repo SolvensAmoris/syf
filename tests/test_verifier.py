@@ -1,9 +1,8 @@
-"""SIF v0.2 relation tests (prototype) + A1-A3/B8 regressions.
+"""SIF relation tests plus A1-A3/B8 contract regressions.
 
-The 9 relation tests come from the v0.2 prototype. The A1-A3/B8 tests are
-marked expectedFailure: they document obligations from the semantic contract
-(docs/semantic-contract-v0.2.md) that v0.2 does not implement yet. They must
-turn green in v0.3; do not delete them to make the suite pass.
+The 9 relation tests come from the v0.2 prototype. A1-A3 remain expected
+failures. B8 is now an active structural-validation regression.
+Do not delete expected failures to make the suite pass.
 """
 
 import copy
