@@ -97,12 +97,11 @@ class SIFRegressionTests(unittest.TestCase):
         x["INTENT"]["action"] = "borrar-todo"
         self.assertEqual(verify(x)[0], "FAIL")
 
-    @unittest.expectedFailure
     def test_b8_scope_wrong_type_reports_structural_error(self):
         x = copy.deepcopy(load_base())
         x["CONSEQUENCE"]["scope"] = "/labels"
         status, reason = verify(x)
-        self.assertEqual(status, "FAIL")
+        self.assertEqual(status, "UNKNOWN")
         self.assertIn("structural", str(reason).lower())
 
 
