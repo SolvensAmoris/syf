@@ -63,14 +63,17 @@ class Finding:
 
 def aggregate_status(findings: Iterable[Finding]) -> Status:
     """Aggregate logical outcomes; severity never determines the verdict."""
+    has_fail = False
     has_unknown = False
     for finding in findings:
         if not isinstance(finding, Finding):
             raise TypeError("findings must contain only Finding instances")
         if finding.outcome is Status.FAIL:
-            return Status.FAIL
-        if finding.outcome is Status.UNKNOWN:
+            has_fail = True
+        elif finding.outcome is Status.UNKNOWN:
             has_unknown = True
+    if has_fail:
+        return Status.FAIL
     return Status.UNKNOWN if has_unknown else Status.PASS
 
 
