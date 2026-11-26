@@ -36,7 +36,6 @@ class TotalityTests(unittest.TestCase):
         self.assertTrue(report.findings)
         self.assertEqual(report.findings[0]["code"], "STRUCTURAL_ERROR")
 
-    @unittest.expectedFailure
     def test_deeply_nested_value_returns_report(self):
         with open(BASE_PATH, encoding="utf-8") as f:
             x = json.load(f)
