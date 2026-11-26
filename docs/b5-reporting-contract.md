@@ -30,6 +30,24 @@ The order of findings does not affect the result. Aggregation never removes
 or rewrites findings. Warnings and informational findings may be exposed as
 report indicators; they do not change the logical status without an outcome.
 
+## Duplicate policy (B5)
+
+B5 permits repeated findings and does not deduplicate them. A `code` identifies
+a diagnostic category, not a unique observation. Two findings with the same
+`code` may describe distinct observations; even byte-for-byte equivalent
+Finding instances are retained as separate entries when added more than once.
+
+`VerificationReport.add()` and `extend()` preserve every supplied finding and
+its insertion position. Serialization preserves that sequence. Aggregation
+considers every entry but remains order-independent; repeated outcomes do not
+change the precedence rules.
+
+B5 does not define a finding identity key, `occurrence_id`, duplicate counter,
+or conflict-resolution behavior. Those require a stable source identity and
+an explicit definition of what constitutes the same observation. Until that
+model exists, no identity is inferred from `code`, message, serialized
+context, severity, or outcome, and no finding is discarded or merged.
+
 ## Compatibility
 
 `VerificationReport` derives its status from its findings and retains the
