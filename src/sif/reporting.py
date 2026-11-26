@@ -32,7 +32,9 @@ class Finding:
             raise ValueError("finding message must be a non-empty string")
         if not isinstance(self.severity, Severity):
             raise TypeError("finding severity must be a Severity")
-        if self.outcome not in (None, Status.FAIL, Status.UNKNOWN):
+        if self.outcome is not None and not isinstance(self.outcome, Status):
+            raise ValueError("finding outcome must be a Status or None")
+        if self.outcome is Status.PASS:
             raise ValueError("finding outcome must be FAIL, UNKNOWN, or None")
         if not isinstance(self.context, dict):
             raise TypeError("finding context must be a dict")
@@ -86,7 +88,8 @@ class VerificationReport:
         self.findings = list(findings or [])
         self.result = result
         computed = aggregate_status(self.findings)
-        if status is not None and str(status) != computed.value:
+        provided_status = status.value if isinstance(status, Status) else status
+        if provided_status is not None and provided_status != computed.value:
             raise ValueError(
                 f"provided status {status!r} conflicts with findings ({computed.value})"
             )
