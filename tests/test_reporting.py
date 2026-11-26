@@ -123,6 +123,20 @@ class FindingAndReportTests(unittest.TestCase):
             }],
         })
 
+    def test_as_dict_preserves_finding_insertion_order(self):
+        report = VerificationReport()
+        report.extend([
+            finding(Severity.WARNING, code="B"),
+            finding(Severity.INFO, code="A"),
+        ])
+
+        serialized = report.as_dict()
+
+        self.assertEqual(
+            [item["code"] for item in serialized["findings"]],
+            ["B", "A"],
+        )
+
     def test_legacy_tuple_and_mapping_access_remain_available(self):
         report = VerificationReport(findings=[
             finding(Severity.ERROR, Status.UNKNOWN, code="STRUCTURAL_ERROR")
