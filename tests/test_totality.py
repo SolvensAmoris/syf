@@ -1,10 +1,8 @@
 """Totality tests (B4): malformed inputs must produce a report, never an
 uncaught exception.
 
-These tests are expected failures against the v0.2 prototype: they define
-the v0.3 totality contract (see
-docs/decisions/0001-result-status-and-findings.md). They must turn green
-in v0.3.
+These tests gate the v0.3 totality contract (see
+docs/decisions/0001-result-status-and-findings.md).
 """
 
 import json
