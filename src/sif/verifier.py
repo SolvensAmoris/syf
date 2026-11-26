@@ -7,6 +7,8 @@ for B4/B8. A1-A3, B5, and snapshot_digest verification remain open.
 
 from copy import deepcopy
 
+from .reporting import Finding, Severity, Status, VerificationReport
+
 class Unknown(Exception): pass
 class Invalid(Exception): pass
 
@@ -95,48 +97,6 @@ def _verify_v02(sif):
         return "UNKNOWN", f"cannot evaluate: {e}"
 
 
-class VerificationReport:
-    """Structured verifier output; tuple access remains for v0.2 callers."""
-    __slots__ = ("status", "findings", "result")
-
-    def __init__(self, status, findings=None, result=None):
-        self.status = status
-        self.findings = list(findings or [])
-        self.result = result
-
-    @property
-    def legacy_detail(self):
-        if self.status == "PASS":
-            return self.result
-        return self.findings[0]["message"] if self.findings else None
-
-    def __getitem__(self, index):
-        if index == 0:
-            return self.status
-        if index == 1:
-            return self.legacy_detail
-        raise IndexError(index)
-
-    def __iter__(self):
-        yield self.status
-        yield self.legacy_detail
-
-    def __len__(self):
-        return 2
-
-    def as_dict(self):
-        report = {"status": self.status, "findings": self.findings}
-        if self.result is not None:
-            report["result"] = self.result
-        return report
-
-    def __eq__(self, other):
-        return isinstance(other, VerificationReport) and self.as_dict() == other.as_dict()
-
-    def __repr__(self):
-        return f"VerificationReport({self.as_dict()!r})"
-
-
 def _structural_finding(sif):
     """Return the first structural defect before semantic evaluation."""
     if not isinstance(sif, dict):
@@ -203,24 +163,38 @@ def verify(sif):
         defect = _structural_finding(sif)
         if defect is not None:
             path, message = defect
-            return VerificationReport("UNKNOWN", [{
-                "code": "STRUCTURAL_ERROR", "path": path, "message": f"structural error: {message}"
-            }])
+            return VerificationReport(findings=[Finding(
+                code="STRUCTURAL_ERROR",
+                message=f"structural error: {message}",
+                severity=Severity.ERROR,
+                outcome=Status.UNKNOWN,
+                context={"path": path},
+            )])
 
         status, detail = _verify_v02(sif)
         if status == "PASS":
-            return VerificationReport("PASS", [], result=detail)
+            return VerificationReport(findings=[], result=detail)
         code = "CONTRADICTION" if status == "FAIL" else "UNRESOLVED"
-        return VerificationReport(status, [{
-            "code": code, "path": "/", "message": str(detail)
-        }])
+        return VerificationReport(findings=[Finding(
+            code=code,
+            message=str(detail),
+            severity=Severity.ERROR if status == "FAIL" else Severity.WARNING,
+            outcome=Status.FAIL if status == "FAIL" else Status.UNKNOWN,
+            context={"path": "/"},
+        )])
     except RecursionError as exc:
-        return VerificationReport("UNKNOWN", [{
-            "code": "RESOURCE_LIMIT", "path": "/",
-            "message": f"evaluation recursion limit reached: {type(exc).__name__}"
-        }])
+        return VerificationReport(findings=[Finding(
+            code="RESOURCE_LIMIT",
+            message=f"evaluation recursion limit reached: {type(exc).__name__}",
+            severity=Severity.ERROR,
+            outcome=Status.UNKNOWN,
+            context={"path": "/"},
+        )])
     except Exception as exc:
-        return VerificationReport("UNKNOWN", [{
-            "code": "EVALUATION_ERROR", "path": "/",
-            "message": f"evaluation could not be completed: {type(exc).__name__}"
-        }])
+        return VerificationReport(findings=[Finding(
+            code="EVALUATION_ERROR",
+            message=f"evaluation could not be completed: {type(exc).__name__}",
+            severity=Severity.ERROR,
+            outcome=Status.UNKNOWN,
+            context={"path": "/"},
+        )])
