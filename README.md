@@ -18,6 +18,9 @@ executed the transformation or that the declared consequence occurred.
 - A1-A3 remain open: the verifier does not yet check all correspondences
   between `INTENT.target`, `TRANSFORMATION.arguments` and
   `TRANSFORMATION.rule`.
+- B5 is partially implemented: typed findings and pure logical-status
+  aggregation exist; the verifier does not yet accumulate multiple rule
+  findings because the rule engine has not been refactored.
 - No authorization, no correspondence with real state, and no effective
   execution have been demonstrated.
 - License: none chosen yet. The author's other repositories carry no license;
@@ -26,8 +29,8 @@ executed the transformation or that the declared consequence occurred.
 ## Layout
 
 ```
-src/sif/verifier.py            # v0.2 prototype verifier (single module; split into
-                               # models/validation/paths/canonicalize/semantics in v0.3)
+src/sif/verifier.py            # v0.2 semantic engine and verification entry point
+src/sif/reporting.py           # typed Finding, VerificationReport, aggregation
 schemas/sif-0.2.schema.json
 tests/test_verifier.py         # 9 relation tests + A1-A3 expected failures + B8
 tests/test_totality.py         # active B4 totality regressions
@@ -62,6 +65,9 @@ to make the suite pass.
   `UNKNOWN/RESOURCE_LIMIT`, without an uncaught exception.
 - **B8**: closed in the current increment: a `scope` with the wrong type
   returns `UNKNOWN/STRUCTURAL_ERROR`, not a misleading semantic `FAIL`.
+- **B5**: partial: `Finding`, severity/outcome separation, pure aggregation,
+  and report serialization are implemented and unit-tested. Multi-finding
+  accumulation across validation rules remains open.
 
 See `docs/audit-log.md` for the full record.
 
@@ -72,7 +78,9 @@ obligations. The closing criterion for v0.3
 (`docs/decisions/0001-result-status-and-findings.md`): the verifier returns a structured report `{status, findings[]}` for tested
 inputs; invalid structure yields UNKNOWN with a STRUCTURAL_ERROR finding;
 status precedence is FAIL > UNKNOWN > PASS; ordinary evaluation exceptions
-are contained. This increment closes B4 and B8 only. A1-A3 and B5 remain open.
+are contained. The B4/B8 increment is closed. The B5 reporting-model increment is partial:
+aggregation is implemented, but multi-rule collection remains open. A1-A3
+remain open.
 
 StarkCore is intentionally not a dependency: SIF stays decoupled until there
 is enough evidence to integrate it.
