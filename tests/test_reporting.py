@@ -102,6 +102,43 @@ class FindingAndReportTests(unittest.TestCase):
         self.assertTrue(report.has_warnings)
         self.assertTrue(report.has_info)
 
+    def test_repeated_same_finding_is_retained(self):
+        report = VerificationReport()
+        item = finding(Severity.WARNING, Status.UNKNOWN, code="REPEATED")
+
+        report.add(item)
+        report.add(item)
+
+        self.assertEqual(report.findings, [item, item])
+        self.assertEqual(len(report.as_dict()["findings"]), 2)
+        self.assertIs(report.status, Status.UNKNOWN)
+
+    def test_same_code_with_distinct_context_is_retained(self):
+        report = VerificationReport()
+        first = Finding(
+            code="DUPLICATE_CODE",
+            message="First observation",
+            severity=Severity.WARNING,
+            context={"record_id": "record-0042"},
+        )
+        second = Finding(
+            code="DUPLICATE_CODE",
+            message="Second observation",
+            severity=Severity.WARNING,
+            context={"record_id": "record-0097"},
+        )
+
+        report.extend([first, second])
+
+        self.assertEqual(
+            [item.context["record_id"] for item in report.findings],
+            ["record-0042", "record-0097"],
+        )
+        self.assertEqual(
+            [item["code"] for item in report.as_dict()["findings"]],
+            ["DUPLICATE_CODE", "DUPLICATE_CODE"],
+        )
+
     def test_report_status_updates_after_add(self):
         report = VerificationReport()
         self.assertIs(report.status, Status.PASS)
