@@ -1,12 +1,8 @@
-"""SIF v0.2 prototype verifier (single module).
+"""SIF transition verifier.
 
-Logic verbatim from the v0.2 prototype. Pending split into
-models / validation / paths / canonicalize / semantics in v0.3.
-
-Known gaps (see docs/audit-log.md): the verifier never reads
-TRANSFORMATION.arguments, INTENT.target or TRANSFORMATION.operator
-(A1-A3); malformed input can raise uncaught exceptions (B4);
-snapshot_digest is never checked.
+The semantic engine remains the v0.2 prototype. This v0.3 increment adds
+structural pre-validation, structured reports, and exception containment
+for B4/B8. A1-A3, B5, and snapshot_digest verification remain open.
 """
 
 from copy import deepcopy
